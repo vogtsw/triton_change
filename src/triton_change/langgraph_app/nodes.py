@@ -23,7 +23,8 @@ def inspect_triton_code(state: TritonDeltaState) -> TritonDeltaState:
     logger = logger_from_state(state)
     logger.node_input("inspect_triton_code", dict(state))
     context = inspect_triton_model(Path(state["triton_model_dir"]))
-    output = {"triton_context": context}
+    mapping_rules = _load_mapping_rules(state.get("mapping_rules_path", ""))
+    output = {"triton_context": context, "mapping_rules": mapping_rules}
     logger.node_output("inspect_triton_code", output)
     return output
 
@@ -35,6 +36,7 @@ def plan_patch_ops(state: TritonDeltaState) -> TritonDeltaState:
     llm_result = make_patch_ops(
         compact_delta=state.get("compact_delta", {}),
         triton_context=state.get("triton_context", {}),
+        mapping_rules=state.get("mapping_rules", {}),
         fallback_ops=fallback_ops,
     )
     output = {
@@ -48,6 +50,7 @@ def plan_patch_ops(state: TritonDeltaState) -> TritonDeltaState:
             "input": {
                 "compact_delta": state.get("compact_delta", {}),
                 "triton_context": state.get("triton_context", {}),
+                "mapping_rules": state.get("mapping_rules", {}),
                 "fallback_ops": fallback_ops,
             },
             "output": {"patch_ops": output["patch_ops"], "raw": output["llm_review"]},
@@ -184,3 +187,13 @@ def _dims_for_config(shape: list) -> list[int]:
     for dim in shape:
         dims.append(dim if isinstance(dim, int) else -1)
     return dims
+
+
+def _load_mapping_rules(path_value: str) -> dict:
+    if not path_value:
+        return {"provided": False, "path": "", "content": ""}
+    path = Path(path_value)
+    if not path.exists():
+        return {"provided": False, "path": str(path), "content": "", "error": "mapping rules file not found"}
+    text = path.read_text(encoding="utf-8")
+    return {"provided": True, "path": str(path), "content": text}

@@ -11,6 +11,8 @@ class TritonDeltaState(TypedDict, total=False):
     model_name: str
     log_dir: str
     run_id: str
+    mapping_rules_path: str
+    mapping_rules: dict[str, Any]
     delta_report: dict[str, Any]
     compact_delta: dict[str, Any]
     triton_context: dict[str, Any]

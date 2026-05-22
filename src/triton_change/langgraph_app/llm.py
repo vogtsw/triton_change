@@ -12,6 +12,7 @@ from triton_change.langgraph_app.logging import estimate_tokens
 def make_patch_ops(
     compact_delta: dict[str, Any],
     triton_context: dict[str, Any],
+    mapping_rules: dict[str, Any],
     fallback_ops: list[dict[str, Any]],
     model: str | None = None,
 ) -> dict[str, Any]:
@@ -24,7 +25,12 @@ def make_patch_ops(
             "usage": {
                 "name": "make_patch_ops",
                 "provider": "deterministic_fallback",
-                "input_tokens": estimate_tokens(json.dumps({"compact_delta": compact_delta, "triton_context": triton_context}, ensure_ascii=False)),
+                "input_tokens": estimate_tokens(
+                    json.dumps(
+                        {"compact_delta": compact_delta, "triton_context": triton_context, "mapping_rules": mapping_rules},
+                        ensure_ascii=False,
+                    )
+                ),
                 "output_tokens": estimate_tokens(json.dumps(output, ensure_ascii=False)),
             },
         }
@@ -35,6 +41,7 @@ def make_patch_ops(
     payload = {
         "compact_delta": compact_delta,
         "triton_context": triton_context,
+        "mapping_rules": mapping_rules,
         "allowed_operations": [
             "copy_target_onnx",
             "regex_replace",
@@ -46,6 +53,8 @@ def make_patch_ops(
     user_content = (
         "Generate minimal JSON patch operations to update the Triton model repository for the target ONNX graph. "
         "Do not output full files. Output only small operation objects with path, operation, selector/pattern, and replacement when needed. "
+        "If mapping_rules.provided is true, treat the Markdown mapping rules as the highest-priority contract for how ONNX changes map to Triton code changes. "
+        "Use those rules to patch custom or improved Triton code that may not look like standard NVIDIA Triton examples. "
         "Inspect Triton Python backend previews for hardcoded serving assumptions such as EXPECTED_SEQUENCE_LENGTH, "
         "EXPECTED_NUM_CLASSES, tensor names, dtype casts, and shape validation. Patch those assumptions when the ONNX diff changes them. "
         "Use fallback_ops unchanged when they are sufficient; otherwise return the smallest corrected set. Return JSON with key patch_ops.\n"

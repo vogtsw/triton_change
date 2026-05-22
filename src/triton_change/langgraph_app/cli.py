@@ -18,6 +18,11 @@ def main() -> None:
     parser.add_argument("--api-key", help="OpenAI-compatible API key. Prefer env vars for normal use.")
     parser.add_argument("--base-url", help="OpenAI-compatible base URL, for example https://api.deepseek.com")
     parser.add_argument("--model", help="OpenAI-compatible model name.")
+    parser.add_argument(
+        "--mapping-rules",
+        type=Path,
+        help="Optional Markdown file describing custom ONNX-to-Triton code mapping rules.",
+    )
     parser.add_argument("--log-dir", type=Path, default=Path("log"), help="Directory for node/tool/LLM JSON snapshots.")
     parser.add_argument("--run-id", default=None, help="Stable run id for logs. Defaults to a UTC timestamp.")
     args = parser.parse_args()
@@ -44,6 +49,7 @@ def main() -> None:
             "model_name": args.model_name or args.triton_model_dir.name,
             "log_dir": str(args.log_dir),
             "run_id": run_id,
+            "mapping_rules_path": str(args.mapping_rules) if args.mapping_rules else "",
         }
     )
     print(json.dumps(result.get("result", result), indent=2, ensure_ascii=False))
