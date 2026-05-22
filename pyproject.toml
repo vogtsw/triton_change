@@ -1,0 +1,29 @@
+[project]
+name = "triton-change"
+version = "0.1.0"
+description = "ONNX architecture diffing and incremental Triton model repository patching."
+requires-python = ">=3.10"
+dependencies = [
+  "numpy>=1.24",
+  "onnx>=1.16",
+  "onnxscript>=0.1.0",
+  "onnxruntime>=1.17",
+  "openai>=1.30",
+  "networkx>=3.0",
+  "pyyaml>=6.0",
+]
+
+[project.optional-dependencies]
+torch = ["torch>=2.1"]
+langgraph = ["langgraph>=0.2.60"]
+dev = ["pytest>=8.0"]
+
+[project.scripts]
+generate-onnx-pair = "triton_change.models.export_pair:main"
+onnx-delta = "triton_change.onnx_delta.cli:main"
+triton-delta-patch = "triton_change.triton.patch_cli:main"
+triton-delta-langgraph = "triton_change.langgraph_app.cli:main"
+
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
