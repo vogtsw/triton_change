@@ -4,4 +4,6 @@ __pycache__/
 .pytest_cache/
 .env
 artifacts/
+artifacts_*/
+log/
 *.egg-info/

@@ -25,3 +25,5 @@ $env:OPENAI_MODEL="deepseek-chat"
 py -m triton_change.langgraph_app.cli artifacts\onnx\hybrid_base.onnx artifacts\onnx\hybrid_modified.onnx --triton-model-dir artifacts\triton_repo\hybrid_text_model --out artifacts\langgraph_patch
 ```
 
+The LangGraph workflow writes progress and snapshots to `log/<run-id>/`: node inputs/outputs, LLM input/output with token usage, and tool-call payloads. The LLM returns compact patch operations only; file writes are performed by local tools.
+The sample Triton Python backend intentionally includes production-style serving guards such as `EXPECTED_SEQUENCE_LENGTH`, so ONNX shape changes require a local patch to `1/model.py` as well as `config.pbtxt`.
