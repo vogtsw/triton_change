@@ -1,0 +1,16 @@
+{
+  "labels": [
+    {
+      "label": "shape_param_change",
+      "from": {
+        "batch": "fixed",
+        "fixed_batch": 1
+      },
+      "to": {
+        "batch": "dynamic"
+      },
+      "affected_region_hint": "function:model_forward",
+      "confidence": 1.0
+    }
+  ]
+}

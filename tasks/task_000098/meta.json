@@ -1,0 +1,31 @@
+{
+  "task_id": "task_000098",
+  "tier": "MVP-hard",
+  "change_types": [
+    "shape_param_change",
+    "dtype_change"
+  ],
+  "base_model": "ln_linear_gelu_linear",
+  "from": {
+    "hidden_size": 896,
+    "intermediate_size": 3584,
+    "seq_len": 128,
+    "batch_size": 1,
+    "ln_eps": 1e-05,
+    "dtype_name": "float32"
+  },
+  "to": {
+    "hidden_size": 1024,
+    "intermediate_size": 4096,
+    "seq_len": 128,
+    "batch_size": 1,
+    "ln_eps": 1e-05,
+    "dtype_name": "bfloat16"
+  },
+  "dtype": "bf16",
+  "device": "cuda",
+  "min_gpu_capability": "sm_70",
+  "estimated_difficulty": 5,
+  "expected_oracle_patch_ops": 3,
+  "description": "Combo shape+dtype: H 896->1024, float32->bfloat16."
+}

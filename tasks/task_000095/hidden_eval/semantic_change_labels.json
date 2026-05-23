@@ -1,0 +1,17 @@
+{
+  "labels": [
+    {
+      "label": "shape_param_change",
+      "from": {
+        "hidden_size": 1280,
+        "intermediate_size": 5120
+      },
+      "to": {
+        "hidden_size": 512,
+        "intermediate_size": 2048
+      },
+      "affected_region_hint": "constant:HIDDEN_SIZE,constant:INTERMEDIATE_SIZE",
+      "confidence": 1.0
+    }
+  ]
+}

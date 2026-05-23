@@ -1,0 +1,33 @@
+{
+  "raw_diff": {
+    "input_shape_changes": [],
+    "output_shape_changes": [],
+    "input_dtype_changes": [],
+    "output_dtype_changes": [],
+    "op_count_delta": {},
+    "weight_shape_changes": [],
+    "attribute_changes": [],
+    "activation_changes": [
+      {
+        "from": "GELU",
+        "to": "BiasGELU"
+      }
+    ],
+    "norm_changes": [],
+    "batch_changes": []
+  },
+  "semantic_labels": [
+    {
+      "label": "activation_change",
+      "from": {
+        "activation": "GELU"
+      },
+      "to": {
+        "activation": "BiasGELU"
+      },
+      "affected_region_hint": "kernel:gelu_act_kernel",
+      "confidence": 1.0
+    }
+  ],
+  "summary_text": "GELU->BiasGELU bias=0.125 (hidden=1024)."
+}

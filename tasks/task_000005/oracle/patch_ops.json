@@ -1,0 +1,14 @@
+{
+  "task_id": "task_000005",
+  "ops": [
+    {
+      "operation": "update_constant",
+      "path": "candidate_model_triton.py",
+      "constant_name": "INTERMEDIATE_SIZE",
+      "new_value": 3072,
+      "reason": "intermediate 2048 -> 3072",
+      "old_value": 2048
+    }
+  ],
+  "notes": "Intermediate-only 2048->3072, hidden stays 768."
+}

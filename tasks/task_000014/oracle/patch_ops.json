@@ -1,0 +1,14 @@
+{
+  "task_id": "task_000014",
+  "ops": [
+    {
+      "operation": "update_constant",
+      "path": "candidate_model_triton.py",
+      "constant_name": "DTYPE_NAME",
+      "new_value": "float16",
+      "reason": "dtype float32 -> float16",
+      "old_value": "float32"
+    }
+  ],
+  "notes": "Compute dtype fp32 -> fp16 on smaller hidden=512 model."
+}

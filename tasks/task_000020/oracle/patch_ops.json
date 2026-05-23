@@ -1,0 +1,30 @@
+{
+  "task_id": "task_000020",
+  "ops": [
+    {
+      "operation": "update_constant",
+      "path": "candidate_model_triton.py",
+      "constant_name": "HIDDEN_SIZE",
+      "new_value": 1024,
+      "reason": "hidden 768 -> 1024",
+      "old_value": 768
+    },
+    {
+      "operation": "update_constant",
+      "path": "candidate_model_triton.py",
+      "constant_name": "INTERMEDIATE_SIZE",
+      "new_value": 4096,
+      "reason": "intermediate 3072 -> 4096",
+      "old_value": 3072
+    },
+    {
+      "operation": "update_constant",
+      "path": "candidate_model_triton.py",
+      "constant_name": "DTYPE_NAME",
+      "new_value": "float16",
+      "reason": "dtype float32 -> float16",
+      "old_value": "float32"
+    }
+  ],
+  "notes": "Combo: hidden 768->1024 + fp32->fp16."
+}

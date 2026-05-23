@@ -1,0 +1,35 @@
+{
+  "raw_diff": {
+    "input_shape_changes": [],
+    "output_shape_changes": [],
+    "input_dtype_changes": [],
+    "output_dtype_changes": [],
+    "op_count_delta": {},
+    "weight_shape_changes": [],
+    "attribute_changes": [
+      {
+        "op_type": "LayerNormalization",
+        "field": "epsilon",
+        "old": 1e-05,
+        "new": 1e-06
+      }
+    ],
+    "activation_changes": [],
+    "norm_changes": [],
+    "batch_changes": []
+  },
+  "semantic_labels": [
+    {
+      "label": "norm_change",
+      "from": {
+        "ln_eps": 1e-05
+      },
+      "to": {
+        "ln_eps": 1e-06
+      },
+      "affected_region_hint": "constant:LN_EPS",
+      "confidence": 1.0
+    }
+  ],
+  "summary_text": "LayerNorm epsilon 1e-5 -> 1e-6."
+}

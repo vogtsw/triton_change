@@ -1,0 +1,87 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://triton-change.local/schemas/trajectory.json",
+  "title": "Agent Trajectory",
+  "description": "Schema for a single LangGraph agent rollout. Used by SFT/DPO/RL data exporters.",
+  "type": "object",
+  "required": ["task_id", "steps", "success", "final_reward"],
+  "properties": {
+    "task_id": {"type": "string"},
+    "tier": {"type": "string"},
+    "change_types": {"type": "array", "items": {"type": "string"}},
+    "agent_model": {"type": "string"},
+    "agent_provider": {"type": "string"},
+    "git_commit_sha": {"type": "string"},
+
+    "steps": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/step"}
+    },
+
+    "final_output_path": {"type": ["string", "null"]},
+    "success": {"type": "boolean"},
+    "final_reward": {"type": "number"},
+    "all_or_nothing_bonus": {"type": "number"},
+    "total_steps": {"type": "integer", "minimum": 0},
+    "total_patch_ops": {"type": "integer", "minimum": 0},
+    "llm_call_log": {
+      "type": "array",
+      "items": {"type": "object"}
+    }
+  },
+  "additionalProperties": true,
+
+  "$defs": {
+    "step": {
+      "type": "object",
+      "required": ["step_idx", "observation", "action", "tool_result", "step_reward", "done"],
+      "properties": {
+        "step_idx": {"type": "integer", "minimum": 0},
+        "observation": {"type": "object"},
+        "action": {
+          "type": "object",
+          "required": ["tool"],
+          "properties": {
+            "tool": {
+              "type": "string",
+              "enum": [
+                "inspect_code_region",
+                "propose_patch",
+                "apply_patch_ops",
+                "run_static_check",
+                "run_correctness_check",
+                "run_benchmark",
+                "finalize"
+              ]
+            }
+          }
+        },
+        "tool_result": {"type": "object"},
+        "step_reward": {"type": "number"},
+        "reward_breakdown": {
+          "type": "object",
+          "additionalProperties": {"type": "number"}
+        },
+        "done": {"type": "boolean"},
+        "failure_class": {
+          "type": ["string", "null"],
+          "enum": [
+            null,
+            "syntax",
+            "import",
+            "runtime",
+            "shape_mismatch",
+            "dtype_mismatch",
+            "numerical_diverge",
+            "timeout",
+            "compile_error",
+            "patch_apply_error",
+            "unsafe_code",
+            "repeated_same_error"
+          ]
+        }
+      },
+      "additionalProperties": true
+    }
+  }
+}

@@ -1,0 +1,33 @@
+{
+  "raw_diff": {
+    "input_shape_changes": [],
+    "output_shape_changes": [],
+    "input_dtype_changes": [],
+    "output_dtype_changes": [],
+    "op_count_delta": {},
+    "weight_shape_changes": [],
+    "attribute_changes": [],
+    "activation_changes": [],
+    "norm_changes": [
+      {
+        "from": "LayerNorm",
+        "to": "RMSNorm"
+      }
+    ],
+    "batch_changes": []
+  },
+  "semantic_labels": [
+    {
+      "label": "norm_change",
+      "from": {
+        "norm": "LayerNorm"
+      },
+      "to": {
+        "norm": "RMSNorm"
+      },
+      "affected_region_hint": "kernel:layernorm_fwd_kernel",
+      "confidence": 1.0
+    }
+  ],
+  "summary_text": "LayerNorm->RMSNorm (variant 15)."
+}

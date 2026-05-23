@@ -1,0 +1,28 @@
+{
+  "labels": [
+    {
+      "label": "shape_param_change",
+      "from": {
+        "hidden_size": 1280,
+        "intermediate_size": 5120
+      },
+      "to": {
+        "hidden_size": 512,
+        "intermediate_size": 2048
+      },
+      "affected_region_hint": "constant:HIDDEN_SIZE,constant:INTERMEDIATE_SIZE",
+      "confidence": 1.0
+    },
+    {
+      "label": "norm_change",
+      "from": {
+        "ln_eps": 1e-05
+      },
+      "to": {
+        "ln_eps": 1e-06
+      },
+      "affected_region_hint": "constant:LN_EPS",
+      "confidence": 1.0
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "task_id": "task_000048",
+  "ops": [
+    {
+      "operation": "update_constant",
+      "path": "candidate_model_triton.py",
+      "constant_name": "SEQ_LEN",
+      "new_value": 768,
+      "reason": "seq_len 512 -> 768",
+      "old_value": 512
+    }
+  ],
+  "notes": "SEQ_LEN 512->768."
+}

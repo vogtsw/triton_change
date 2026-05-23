@@ -1,0 +1,56 @@
+{
+  "raw_diff": {
+    "input_shape_changes": [
+      {
+        "name": "input",
+        "old_shape": [
+          1,
+          512,
+          768
+        ],
+        "new_shape": [
+          1,
+          768,
+          768
+        ]
+      }
+    ],
+    "output_shape_changes": [
+      {
+        "name": "output",
+        "old_shape": [
+          1,
+          512,
+          768
+        ],
+        "new_shape": [
+          1,
+          768,
+          768
+        ]
+      }
+    ],
+    "input_dtype_changes": [],
+    "output_dtype_changes": [],
+    "op_count_delta": {},
+    "weight_shape_changes": [],
+    "attribute_changes": [],
+    "activation_changes": [],
+    "norm_changes": [],
+    "batch_changes": []
+  },
+  "semantic_labels": [
+    {
+      "label": "shape_param_change",
+      "from": {
+        "seq_len": 512
+      },
+      "to": {
+        "seq_len": 768
+      },
+      "affected_region_hint": "constant:SEQ_LEN",
+      "confidence": 1.0
+    }
+  ],
+  "summary_text": "SEQ_LEN 512->768."
+}

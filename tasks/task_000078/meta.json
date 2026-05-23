@@ -1,0 +1,30 @@
+{
+  "task_id": "task_000078",
+  "tier": "MVP-medium",
+  "change_types": [
+    "norm_change"
+  ],
+  "base_model": "ln_linear_gelu_linear",
+  "from": {
+    "hidden_size": 768,
+    "intermediate_size": 3072,
+    "seq_len": 128,
+    "batch_size": 1,
+    "ln_eps": 1e-05,
+    "dtype_name": "float32"
+  },
+  "to": {
+    "hidden_size": 768,
+    "intermediate_size": 3072,
+    "seq_len": 128,
+    "batch_size": 1,
+    "ln_eps": 1e-05,
+    "dtype_name": "float32"
+  },
+  "dtype": "fp32",
+  "device": "cuda",
+  "min_gpu_capability": "sm_70",
+  "estimated_difficulty": 3,
+  "expected_oracle_patch_ops": 1,
+  "description": "LayerNorm->RMSNorm (variant 19)."
+}

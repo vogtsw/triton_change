@@ -1,0 +1,55 @@
+{
+  "input": {
+    "name": "input",
+    "shape": [
+      1,
+      128,
+      1280
+    ],
+    "dtype": "fp32"
+  },
+  "output": {
+    "name": "output",
+    "shape": [
+      1,
+      128,
+      1280
+    ],
+    "dtype": "fp32"
+  },
+  "weight_keys": [
+    "ln_w",
+    "ln_b",
+    "w1",
+    "b1",
+    "w2",
+    "b2"
+  ],
+  "weight_shapes": {
+    "ln_w": [
+      1280
+    ],
+    "ln_b": [
+      1280
+    ],
+    "w1": [
+      5120,
+      1280
+    ],
+    "b1": [
+      5120
+    ],
+    "w2": [
+      1280,
+      5120
+    ],
+    "b2": [
+      1280
+    ]
+  },
+  "test_input_count": 3,
+  "tolerance": {
+    "atol": 0.001,
+    "rtol": 0.001
+  }
+}

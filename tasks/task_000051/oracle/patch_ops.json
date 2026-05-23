@@ -1,0 +1,22 @@
+{
+  "task_id": "task_000051",
+  "ops": [
+    {
+      "operation": "update_constant",
+      "path": "candidate_model_triton.py",
+      "constant_name": "HIDDEN_SIZE",
+      "new_value": 896,
+      "reason": "hidden 512 -> 896",
+      "old_value": 512
+    },
+    {
+      "operation": "update_constant",
+      "path": "candidate_model_triton.py",
+      "constant_name": "INTERMEDIATE_SIZE",
+      "new_value": 3584,
+      "reason": "intermediate 2048 -> 3584",
+      "old_value": 2048
+    }
+  ],
+  "notes": "Shape hidden 512->896, inter 2048->3584."
+}

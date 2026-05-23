@@ -1,0 +1,27 @@
+{
+  "task_id": "task_000076",
+  "ops": [
+    {
+      "operation": "regex_replace",
+      "path": "candidate_model_triton.py",
+      "pattern": "(GELU_BLOCK_SIZE = \\d+\\n)",
+      "replacement": "\\1GELU_IN_BIAS = 0.125\\n",
+      "reason": "add GELU_IN_BIAS constant for BiasGELU"
+    },
+    {
+      "operation": "replace_kernel_body",
+      "path": "candidate_model_triton.py",
+      "kernel_name": "gelu_act_kernel",
+      "new_body": "pid = tl.program_id(0)\noffsets = pid * BLOCK_SIZE + tl.arange(0, BLOCK_SIZE)\nmask = offsets < N_ELEMENTS\n\nx = tl.load(X_ptr + offsets, mask=mask).to(tl.float32)\nx = x + GELU_IN_BIAS\ninner = 0.7978845608028654 * (x + 0.044715 * x * x * x)\ne2x = tl.exp(2.0 * inner)\ntanh_inner = (e2x - 1.0) / (e2x + 1.0)\ny = 0.5 * x * (1.0 + tanh_inner)\ntl.store(Y_ptr + offsets, y, mask=mask)\n",
+      "reason": "switch GELU kernel to BiasGELU (add GELU_IN_BIAS inside kernel)"
+    },
+    {
+      "operation": "regex_replace",
+      "path": "candidate_model_triton.py",
+      "pattern": "_gelu_tanh\\(h\\)",
+      "replacement": "_gelu_bias(h)",
+      "reason": "call BiasGELU helper in model_forward"
+    }
+  ],
+  "notes": "GELU->BiasGELU bias=0.125 (hidden=1024)."
+}

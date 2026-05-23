@@ -1,0 +1,28 @@
+{
+  "labels": [
+    {
+      "label": "shape_param_change",
+      "from": {
+        "hidden_size": 512,
+        "intermediate_size": 2048
+      },
+      "to": {
+        "hidden_size": 768,
+        "intermediate_size": 3072
+      },
+      "affected_region_hint": "constant:HIDDEN_SIZE,constant:INTERMEDIATE_SIZE",
+      "confidence": 1.0
+    },
+    {
+      "label": "dtype_change",
+      "from": {
+        "dtype": "float32"
+      },
+      "to": {
+        "dtype": "bfloat16"
+      },
+      "affected_region_hint": "constant:DTYPE_NAME",
+      "confidence": 1.0
+    }
+  ]
+}

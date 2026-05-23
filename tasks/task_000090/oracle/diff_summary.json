@@ -1,0 +1,134 @@
+{
+  "raw_diff": {
+    "input_shape_changes": [
+      {
+        "name": "input",
+        "old_shape": [
+          1,
+          128,
+          1280
+        ],
+        "new_shape": [
+          1,
+          128,
+          512
+        ]
+      }
+    ],
+    "output_shape_changes": [
+      {
+        "name": "output",
+        "old_shape": [
+          1,
+          128,
+          1280
+        ],
+        "new_shape": [
+          1,
+          128,
+          512
+        ]
+      }
+    ],
+    "input_dtype_changes": [
+      {
+        "name": "input",
+        "old_dtype": "float32",
+        "new_dtype": "bfloat16"
+      }
+    ],
+    "output_dtype_changes": [],
+    "op_count_delta": {},
+    "weight_shape_changes": [
+      {
+        "name": "ln.weight",
+        "old_shape": [
+          1280
+        ],
+        "new_shape": [
+          512
+        ]
+      },
+      {
+        "name": "ln.bias",
+        "old_shape": [
+          1280
+        ],
+        "new_shape": [
+          512
+        ]
+      },
+      {
+        "name": "fc1.weight",
+        "old_shape": [
+          5120,
+          1280
+        ],
+        "new_shape": [
+          2048,
+          512
+        ]
+      },
+      {
+        "name": "fc1.bias",
+        "old_shape": [
+          5120
+        ],
+        "new_shape": [
+          2048
+        ]
+      },
+      {
+        "name": "fc2.weight",
+        "old_shape": [
+          1280,
+          5120
+        ],
+        "new_shape": [
+          512,
+          2048
+        ]
+      },
+      {
+        "name": "fc2.bias",
+        "old_shape": [
+          1280
+        ],
+        "new_shape": [
+          512
+        ]
+      }
+    ],
+    "attribute_changes": [],
+    "activation_changes": [],
+    "norm_changes": [],
+    "batch_changes": []
+  },
+  "semantic_labels": [
+    {
+      "label": "shape_param_change",
+      "from": {
+        "hidden_size": 1280,
+        "intermediate_size": 5120
+      },
+      "to": {
+        "hidden_size": 512,
+        "intermediate_size": 2048
+      },
+      "affected_region_hint": "constant:HIDDEN_SIZE,constant:INTERMEDIATE_SIZE",
+      "confidence": 1.0
+    },
+    {
+      "label": "dtype_change",
+      "from": {
+        "dtype": "float32"
+      },
+      "to": {
+        "dtype": "bfloat16"
+      },
+      "affected_region_hint": "constant:DTYPE_NAME",
+      "confidence": 1.0
+    }
+  ],
+  "summary_text": "Combo shape+dtype: H 1280->512, float32->bfloat16."
+}

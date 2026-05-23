@@ -1,0 +1,22 @@
+{
+  "task_id": "task_000002",
+  "ops": [
+    {
+      "operation": "update_constant",
+      "path": "candidate_model_triton.py",
+      "constant_name": "HIDDEN_SIZE",
+      "new_value": 768,
+      "reason": "hidden 1024 -> 768",
+      "old_value": 1024
+    },
+    {
+      "operation": "update_constant",
+      "path": "candidate_model_triton.py",
+      "constant_name": "INTERMEDIATE_SIZE",
+      "new_value": 3072,
+      "reason": "intermediate 4096 -> 3072",
+      "old_value": 4096
+    }
+  ],
+  "notes": "Hidden 1024->768, intermediate 4096->3072 (reverse upsize)."
+}

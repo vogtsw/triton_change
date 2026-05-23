@@ -1,0 +1,12 @@
+{
+  "task_id": "task_000048",
+  "ops": [
+    {
+      "operation": "full_file_replace",
+      "path": "candidate_model_triton.py",
+      "new_code": "\"\"\"CPU demo equivalent for task_000048.\"\"\"\nfrom __future__ import annotations\n\nimport torch\nimport torch.nn.functional as F\n\nHIDDEN_SIZE = 768\nINTERMEDIATE_SIZE = 3072\nLN_EPS = 1e-05\nSEQ_LEN = 768\nDTYPE_NAME = \"float32\"\n\ndef _compute_dtype() -> torch.dtype:\n    return getattr(torch, DTYPE_NAME)\n\ndef model_forward(\n    x: torch.Tensor,\n    ln_w: torch.Tensor,\n    ln_b: torch.Tensor,\n    w1: torch.Tensor,\n    b1: torch.Tensor,\n    w2: torch.Tensor,\n    b2: torch.Tensor,\n) -> torch.Tensor:\n    dtype = _compute_dtype()\n    x = x.to(dtype)\n    ln_w = ln_w.to(dtype)\n    ln_b = ln_b.to(dtype)\n    w1 = w1.to(dtype)\n    b1 = b1.to(dtype)\n    w2 = w2.to(dtype)\n    b2 = b2.to(dtype)\n    B, S, H = x.shape\n    assert H == HIDDEN_SIZE\n    assert S == SEQ_LEN\n    h = F.layer_norm(x, (HIDDEN_SIZE,), weight=ln_w, bias=ln_b, eps=LN_EPS)\n    h = F.linear(h, w1, b1)\n    assert h.shape[-1] == INTERMEDIATE_SIZE\n    h = F.gelu(h, approximate=\"tanh\")\n    h = F.linear(h, w2, b2)\n    return h.to(dtype)\n",
+      "reason": "CPU demo (no Triton): torch-only equivalent for Windows pipeline verification."
+    }
+  ],
+  "notes": "Demo path; real oracle is oracle/patch_ops.json."
+}

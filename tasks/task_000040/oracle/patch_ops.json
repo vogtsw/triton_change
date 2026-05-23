@@ -1,0 +1,20 @@
+{
+  "task_id": "task_000040",
+  "ops": [
+    {
+      "operation": "replace_function",
+      "path": "candidate_model_triton.py",
+      "function_name": "model_forward",
+      "new_code": "def model_forward(\n    x: torch.Tensor,\n    ln_w: torch.Tensor,\n    ln_b: torch.Tensor,\n    w1: torch.Tensor,\n    b1: torch.Tensor,\n    w2: torch.Tensor,\n    b2: torch.Tensor,\n) -> torch.Tensor:\n    dtype = _compute_dtype()\n    x = x.to(dtype)\n    ln_w = ln_w.to(dtype)\n    ln_b = ln_b.to(dtype)\n    w1 = w1.to(dtype)\n    b1 = b1.to(dtype)\n    w2 = w2.to(dtype)\n    b2 = b2.to(dtype)\n    B, S, H = x.shape\n    assert H == HIDDEN_SIZE, f\"input hidden mismatch: {H} vs {HIDDEN_SIZE}\"\n    x_flat = x.reshape(B * S, H).contiguous()\n    h = _layernorm(x_flat, ln_w, ln_b)\n    h = torch.nn.functional.linear(h, w1, b1)\n    assert h.shape[-1] == INTERMEDIATE_SIZE\n    h = _gelu_tanh(h)\n    h = torch.nn.functional.linear(h, w2, b2)\n    assert h.shape[-1] == HIDDEN_SIZE\n    return h.reshape(B, S, H).to(dtype)\n",
+      "reason": "remove FIXED_BATCH=8 assert; target ONNX uses dynamic batch"
+    },
+    {
+      "operation": "regex_replace",
+      "path": "candidate_model_triton.py",
+      "pattern": "^FIXED_BATCH = \\d+\\n",
+      "replacement": "",
+      "reason": "drop unused FIXED_BATCH constant"
+    }
+  ],
+  "notes": "Fixed batch 8 -> dynamic (test B=4)."
+}

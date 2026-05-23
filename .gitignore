@@ -1,9 +1,24 @@
 .venv/
 __pycache__/
 *.pyc
+*.pyo
 .pytest_cache/
 .env
-artifacts/
-artifacts_*/
-log/
 *.egg-info/
+
+# v2 kernel agent runtime / generated artifacts
+.triton_cache/
+trajectories/
+runtime_logs/
+data/
+candidates/
+tasks/**/base.onnx
+tasks/**/target.onnx
+tasks/**/hidden_eval/test_inputs.pt
+tasks/**/hidden_eval/target_outputs.pt
+tasks/**/hidden_eval/weights.pt
+tasks/**/sandbox/test_inputs.pt
+tasks/**/sandbox/weights.pt
+tasks/**/sandbox/candidate_outputs.pt
+tasks/**/candidate_*.py
+tasks/**/reward.json

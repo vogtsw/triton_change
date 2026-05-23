@@ -1,0 +1,62 @@
+{
+  "raw_diff": {
+    "input_shape_changes": [
+      {
+        "name": "input",
+        "old_shape": [
+          8,
+          128,
+          768
+        ],
+        "new_shape": [
+          4,
+          128,
+          768
+        ]
+      }
+    ],
+    "output_shape_changes": [
+      {
+        "name": "output",
+        "old_shape": [
+          8,
+          128,
+          768
+        ],
+        "new_shape": [
+          4,
+          128,
+          768
+        ]
+      }
+    ],
+    "input_dtype_changes": [],
+    "output_dtype_changes": [],
+    "op_count_delta": {},
+    "weight_shape_changes": [],
+    "attribute_changes": [],
+    "activation_changes": [],
+    "norm_changes": [],
+    "batch_changes": [
+      {
+        "from": "fixed_8",
+        "to": "dynamic"
+      }
+    ]
+  },
+  "semantic_labels": [
+    {
+      "label": "shape_param_change",
+      "from": {
+        "batch": "fixed",
+        "fixed_batch": 8
+      },
+      "to": {
+        "batch": "dynamic"
+      },
+      "affected_region_hint": "function:model_forward",
+      "confidence": 1.0
+    }
+  ],
+  "summary_text": "Fixed batch 8 -> dynamic (test B=4)."
+}

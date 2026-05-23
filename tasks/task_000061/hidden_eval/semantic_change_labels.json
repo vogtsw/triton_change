@@ -1,0 +1,15 @@
+{
+  "labels": [
+    {
+      "label": "activation_change",
+      "from": {
+        "activation": "GELU"
+      },
+      "to": {
+        "activation": "ReLU"
+      },
+      "affected_region_hint": "kernel:gelu_act_kernel",
+      "confidence": 1.0
+    }
+  ]
+}

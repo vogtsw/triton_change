@@ -1,426 +1,275 @@
 # Triton Change
 
-这个项目演示一条面向 NVIDIA Triton 服务代码迁移的工作流：
+ONNX-guided Triton single-file kernel migration agent.
 
-```text
-旧 ONNX + 新 ONNX + 旧 ONNX 对应的 Triton 代码
-=> Python 解析两个 ONNX 的架构差异
-=> 把差异 JSON 和旧 Triton 代码摘要交给 LangGraph 里的 LLM
-=> LLM 只生成少量局部 patch operations
-=> 本地工具应用 patch，生成新 ONNX 对应的新 Triton 代码
-=> 写出日志、token 用量和 PATCH_SUMMARY.md
+**Goal**: train a small model that, given `(base.onnx, target.onnx, old_model_triton.py)`,
+produces `new_model_triton.py` whose `model_forward` matches the semantics of
+`target.onnx` — through multi-step LangGraph patch ops with validator-based reward.
+
+The full design lives in [`onnx_triton_single_file_agent_spec.md`](onnx_triton_single_file_agent_spec.md).
+
+---
+
+## Status
+
+| Phase | Description | Status |
+|---|---|---|
+| Phase 0 | Schemas + repo skeleton | Done |
+| Phase -1 | DeepSeek frontier baseline plumbing | Done (client + smoke) |
+| Phase 1 | Patcher + static check + correctness check + reward | **Done** (60 tests, e2e demo: reward 2.10) |
+| Phase 2 | LangGraph-style multi-step agent + DeepSeek policy | **Done** (28 tests, 5-task baseline run) |
+| Phase 3a | 20 handcrafted tasks | **Done** (12 easy + 8 medium) |
+| Phase 3b | Expand to 100 tasks (easy:medium:hard ≈ 5:3:2) | **Done** |
+| Phase 4 | SFT export (observation→action) | **Done** (`scripts/export_sft.py`) |
+| Phase 5 | DPO pairs (K=8 sampling + oracle judge) | **Done** (`scripts/build_dpo_pairs.py`) |
+| Phase 6 | LangGraph rollout + GRPO/RLOO/PPO scaffolding | **Done** (task<500; no GPU trainer) |
+
+### Phase 1 acceptance evidence
+
+| Component | Verification |
+|---|---|
+| `patcher.py` (8 op types + path safety) | 21 unit tests + 5-task parameterized oracle round-trip |
+| `static_check.py` (AST + danger scan) | 10 unit tests |
+| `correctness.py` (subprocess sandbox) | 6 unit tests with synthetic torch-only candidates |
+| `reward.py` (anti-hacking composition) | 11 unit tests; perfect-run scenario lands at 2.70 |
+| `run_phase1.py` (e2e driver) | 5/5 tasks pass on Windows CPU via `cpu_demo_patch_ops.json` (reward 2.10) |
+
+The `cpu_demo_*` files exist purely so the pipeline can be validated end-to-end
+on machines without OpenAI Triton. Real Triton runs (the 2.70-reward path)
+require Linux + CUDA + `triton>=2.1`.
+
+### Phase 2 acceptance evidence
+
+| Spec requirement | Verification |
+|---|---|
+| LangGraph-style state graph (observe -> propose -> apply -> check -> reward) | `agent/runner.py` — pure-Python loop; trivially wrappable in LangGraph |
+| Tool calls: inspect / apply / static / correctness / benchmark / finalize | `agent/tools.py` (10 unit tests) |
+| Error feedback: failure_class + error_tail + hint into next observation | `agent/observation.py::failure_hint` (9 unit tests) |
+| Repeated-error breaker | `error_signature` + `max_repeated_errors` (test_repeated_same_error_terminates) |
+| Trajectory.jsonl with reward_breakdown / failure_class | `agent/trajectory.py`; schema-validated |
+| DeepSeek agent multi-step repair on task_000001 | `scripts/run_agent.py` real run: 3 steps, surgical patches, schema-valid |
+| 5-task baseline run | `scripts/run_phase2_baseline.py --policy deepseek` — see `trajectories/baseline_deepseek.md` |
+
+### Phase 3a acceptance evidence (20 handcrafted tasks)
+
+| Category | Tasks | Patch style |
+|---|---|---|
+| hidden_size_change (×3) | 000001–000003 | update_constant |
+| intermediate_size (×2) | 000004–000005 | update_constant |
+| seq_len_change (×3) | 000006–000008 | update_constant SEQ_LEN |
+| ln_epsilon_change (×2) | 000009–000010 | update_constant LN_EPS |
+| batch_dim_change (×2) | 000011–000012 | replace_function + regex |
+| dtype fp32→fp16 (×2) | 000013–000014 | update_constant DTYPE_NAME |
+| dtype fp32→bf16 (×1) | 000015 | update_constant DTYPE_NAME |
+| GELU→BiasGELU (×2) | 000016–000017 | regex + replace_kernel_body |
+| GELU→ReLU (×1) | 000018 | replace_kernel_body |
+| LayerNorm→RMSNorm (×1) | 000019 | replace_kernel_body |
+| combo hidden+dtype (×1) | 000020 | update_constant ×3 |
+
+All 20 tasks: schema-valid, oracle round-trip AST match, cpu-demo Phase 1/2 pass (reward 2.10).
+
+Regenerate anytime:
+
+```powershell
+py scripts\generate_tasks.py                    # all 100 tasks
+py scripts\generate_tasks.py --from 21 --to 100 # Phase 3b only
+py scripts\eval_patch_oracle.py --from 1 --to 100
+py scripts\run_phase2_baseline.py --policy oracle --cpu-demo
+py scripts\export_sft.py trajectories\baseline_oracle.jsonl
+py scripts\build_dpo_pairs.py
+py scripts\run_rl_rollout.py --policy oracle --cpu-demo --from 1 --to 5
 ```
 
-项目不会下载 CUDA，也不要求实际运行 GPU/Triton Server。当前样例使用 CPU 版 ONNX Runtime 来验证生成的 ONNX 和 Triton Python backend 逻辑。
+### Phase 3b–6 (100 tasks + data prep + RL scaffolding)
 
-## 主要能力
+| Item | Detail |
+|---|---|
+| Task catalog | 100 tasks: 50 easy / 30 medium / 20 hard (`scripts/task_catalog.py`) |
+| Oracle judge | AST match vs oracle — no DeepSeek / no GPU (`scripts/eval_patch_oracle.py`) |
+| SFT export | trajectory JSONL → observation→action pairs (`scripts/export_sft.py`) |
+| DPO pairs | K=8 perturbations ranked by oracle judge (`scripts/build_dpo_pairs.py`) |
+| RL scaffolding | LangGraph wrapper + GRPO/RLOO/PPO math (`src/triton_change/training/`) |
 
-- 生成一个带 `Conv1d` 和 `TransformerEncoder` 的训练/导出样例模型。
-- 导出两份 ONNX：
-  - `hybrid_base.onnx`：旧模型。
-  - `hybrid_modified.onnx`：新模型，包含输入序列长度变化、Conv1d 通道变化、Transformer FFN 维度变化和 Cast 精度变化。
-- 生成一份类似 NVIDIA Triton Python backend 的旧服务代码。
-- 比较两份 ONNX，生成结构化差异 JSON。
-- 通过 LangGraph 调用 OpenAI-compatible LLM，例如 DeepSeek。
-- 让 LLM 基于 ONNX diff 和旧 Triton 代码生成局部 patch ops，而不是输出完整文件。
-- 通过本地工具应用 patch，生成新的 Triton model repository。
-- 记录节点输入/输出、LLM 输入/输出、token 用量、工具调用快照。
+Evaluation uses **oracle patch correctness** (apply + AST match), not live DeepSeek or GPU Triton runs.
 
-## 目录结构
+---
 
-```text
-triton_change/
-  pyproject.toml
-  README.md
-  .env.example
-
-  src/triton_change/
-    models/
-      hybrid_model.py          # Conv1d + Transformer 样例模型
-      train_model.py           # 简单训练骨架
-      export_pair.py           # 导出 base/new ONNX，并生成旧 Triton repo
-
-    onnx_delta/
-      analyzer.py              # 解析 ONNX graph、tensor、initializer、op 统计
-      diff.py                  # 生成 ONNX 架构差异
-      cli.py                   # ONNX diff CLI
-      schema.py                # diff 数据结构
-
-    triton/
-      repository.py            # 生成 NVIDIA 风格 Triton Python backend 样例
-      patch_ops.py             # patch op 工具：复制 ONNX、regex 替换、写报告
-      patcher.py               # 确定性 patcher，保留作非 LangGraph 路径
-      patch_cli.py             # 确定性 patcher CLI
-
-    langgraph_app/
-      graph.py                 # LangGraph 节点编排
-      nodes.py                 # 节点实现
-      llm.py                   # OpenAI-compatible LLM 调用
-      logging.py               # 日志、快照、token 记录
-      state.py                 # LangGraph state 定义
-      cli.py                   # LangGraph CLI
-
-  skills/triton-onnx-delta/
-    SKILL.md                   # 独立 Codex skill 方案
-    scripts/                   # skill wrapper 脚本
-    references/                # patch 策略参考
-
-  tests/
-    test_shape_utils.py
-```
-
-运行后会生成这些目录，默认不会提交到 git：
+## Layout
 
 ```text
-artifacts/                     # 默认样例产物
-artifacts_nvidia_like/          # 可选实验产物
-log/                           # LangGraph 运行日志和快照
+schemas/                          JSON Schemas
+  task_schema.json
+  patch_ops_schema.json
+  trajectory_schema.json
+
+tasks/                            Handcrafted migration tasks
+  task_000001/                    hidden 768->1024, intermediate 3072->4096   (2 ops)
+  task_000002/                    hidden 768->512,  intermediate 3072->2048   (2 ops)
+  task_000003/                    intermediate-only 3072->4096                 (1 op)
+  task_000004/                    LayerNorm eps 1e-5 -> 1e-6                   (1 op)
+  task_000005/                    combo: hidden+intermediate+eps               (3 ops)
+
+    Each task contains:
+      meta.json
+      old_model_triton.py
+      oracle/new_model_triton.py            gold-standard Triton output
+      oracle/patch_ops.json                 surgical update_constant ops
+      oracle/diff_summary.json
+      oracle/cpu_demo_new_model_triton.py   torch-only (Windows demo)
+      oracle/cpu_demo_patch_ops.json        full_file_replace using the above
+      hidden_eval/input_specs.json
+      hidden_eval/semantic_change_labels.json
+      hidden_eval/reference_forward.py      PyTorch ground truth
+      base.onnx, target.onnx                       (generated)
+      hidden_eval/weights.pt, test_inputs.pt, target_outputs.pt   (generated)
+
+src/triton_change/                Python package
+  __init__.py
+  patcher.py                      8 patch op types, path-safe
+  static_check.py                 AST + import whitelist + danger scan
+  correctness.py                  subprocess sandbox + tolerance comparison
+  reward.py                       anti-hacking reward composition
+  agent/
+    observation.py                CodeSummary + Observation + hint templates
+    tools.py                      Unified ToolResult wrappers
+    policy.py                     PolicyBase + Mock / Oracle / DeepSeek policies
+    runner.py                     observe -> act -> tool -> reward loop
+    trajectory.py                 JSONL writer + schema validation
+  llm_clients/
+    deepseek_client.py            OpenAI-compatible DeepSeek client
+
+scripts/
+  validate_task.py                Schema-validate a task directory
+  generate_tasks.py               20-task generator (Phase 3a catalog)
+  task_profiles.py                Profile templates (shape/seq/batch/dtype/activation/norm)
+  build_cpu_demo_patches.py       Emit cpu_demo_patch_ops.json for any task
+  run_phase1.py                   End-to-end Phase 1 driver
+  run_agent.py                    Phase 2 single-task agent driver
+  run_phase2_baseline.py          Phase 2 multi-task baseline (oracle / deepseek)
+  smoke_test_deepseek.py          DeepSeek API smoke test
+
+tests/
+  test_patcher.py                 21 tests + 20-task parameterized oracle round-trip
+  test_static_check.py            10 tests — syntax/imports/danger scan
+  test_correctness.py             6 tests — sandbox + numerical/shape/timeout failure classes
+  test_reward.py                  11 tests — every reward branch
+  test_schemas.py                 12 tests — JSON schema conformance
+  test_agent_observation.py       9 tests — code summary + hint templates
+  test_agent_tools.py             10 tests — tool wrappers
+  test_agent_runner.py            9 tests — full loop (mock + oracle policies)
 ```
 
-## 安装
+---
+
+## Setup
 
 ```powershell
 cd D:\test\mygithub\triton_change
-py -m pip install -e ".[torch,langgraph]"
+py -m pip install -e ".[dev,torch,dotenv]"
+copy .env.example .env
+# edit .env, set DEEPSEEK_API_KEY=sk-...
 ```
 
-如果只想跑 ONNX diff 和确定性 patch，可以不安装 `langgraph` extra；如果要重新导出样例 ONNX，需要安装 `torch` extra。
+Optional: install Triton (Linux + CUDA only; on Windows you can develop the
+patcher and static check on CPU, but `correctness_check` requires Triton at runtime).
 
-## 生成样例 ONNX 和旧 Triton 代码
+```bash
+py -m pip install -e ".[triton-runtime]"
+```
+
+---
+
+## Quick start
+
+### 1. Generate all 5 tasks' dynamic data
+
+```powershell
+$env:PYTHONIOENCODING="utf-8"
+py scripts\generate_tasks.py
+```
+
+This writes `base.onnx`, `target.onnx`, `weights.pt`, `test_inputs.pt`,
+`target_outputs.pt` and refreshes the static .py / .json files for every task.
+
+### 2. Validate all task directories
+
+```powershell
+foreach ($id in 1..5) { $tid = "task_{0:D6}" -f $id; py scripts\validate_task.py "tasks\$tid" }
+```
+
+### 3. Run the test suite
 
 ```powershell
 $env:PYTHONPATH="src"
-py -m triton_change.models.export_pair --out-dir artifacts
+py -m pytest -v
 ```
 
-生成结果：
+Expected: 55+ tests pass.
 
-```text
-artifacts/
-  onnx/
-    hybrid_base.onnx
-    hybrid_base.onnx.data
-    hybrid_modified.onnx
-    hybrid_modified.onnx.data
+### 4. Run Phase 1 end-to-end
 
-  triton_repo/
-    hybrid_text_model/
-      config.pbtxt
-      model.onnx
-      1/
-        model.py
+On Linux + GPU + Triton (canonical path, expected reward ~ 2.70):
+
+```bash
+python scripts/run_phase1.py tasks/task_000001 --device cuda
 ```
 
-样例旧 Triton `1/model.py` 里故意包含生产服务中常见的硬编码约束，例如：
-
-```python
-INPUT_TENSOR_NAME = "input_ids"
-OUTPUT_TENSOR_NAME = "logits"
-EXPECTED_SEQUENCE_LENGTH = 32
-EXPECTED_NUM_CLASSES = 5
-```
-
-当新 ONNX 的输入长度从 `32` 变成 `40` 时，LangGraph 需要让 LLM 生成对 `1/model.py` 的局部修改，而不只是替换 ONNX。
-
-## LangGraph 使用方法
-
-### 1. 配置 OpenAI-compatible API
-
-不要把 API key 写进代码或 README。用环境变量配置：
+On Windows / CPU (demo path, expected reward 2.10):
 
 ```powershell
-$env:OPENAI_BASE_URL="https://api.deepseek.com"
-Set-Item Env:OPENAI_API_KEY "<your-api-key>"
-$env:OPENAI_MODEL="deepseek-chat"
+py scripts\run_phase1.py tasks\task_000001 --patch-ops tasks\task_000001\oracle\cpu_demo_patch_ops.json
 ```
 
-也支持其他 OpenAI-compatible 服务，只要设置对应的 `OPENAI_BASE_URL`、`OPENAI_API_KEY` 和 `OPENAI_MODEL`。
+### 5. Run the Phase 2 multi-step agent
 
-如果没有设置 key，LangGraph 会走 deterministic fallback，仍然会生成 patch ops 和日志，但 token 用量是本地估算值，不是服务商返回值。
-
-### 2. 运行 LangGraph
+Oracle policy (sanity check, replays oracle/patch_ops.json):
 
 ```powershell
-$env:PYTHONPATH="src"
-py -m triton_change.langgraph_app.cli `
-  artifacts\onnx\hybrid_base.onnx `
-  artifacts\onnx\hybrid_modified.onnx `
-  --triton-model-dir artifacts\triton_repo\hybrid_text_model `
-  --out artifacts\langgraph_patch `
-  --mapping-rules examples\improved_triton_mapping_rules.md `
-  --log-dir log `
-  --run-id demo_run
+py scripts\run_agent.py tasks\task_000001 --policy oracle
 ```
 
-三个核心输入：
-
-- `base_onnx`：旧 ONNX。
-- `target_onnx`：新 ONNX。
-- `--triton-model-dir`：旧 ONNX 对应的 Triton model repository。
-- `--mapping-rules`：可选 Markdown 规则文件，用来描述自定义 ONNX 到 Triton 代码的映射关系。
-
-主要输出：
-
-```text
-artifacts/langgraph_patch/
-  hybrid_text_model/
-    config.pbtxt
-    model.onnx
-    hybrid_modified.onnx.data
-    delta_report.json
-    PATCH_SUMMARY.md
-    1/
-      model.py
-```
-
-## LangGraph 工作流程
-
-当前 LangGraph 节点顺序：
-
-```text
-analyze_graphs
-  -> inspect_triton_code
-  -> plan_patch_ops
-  -> apply_patch
-  -> write_summary
-```
-
-### `analyze_graphs`
-
-用 Python 解析两份 ONNX，生成：
-
-- 输入/输出 tensor 名称、dtype、shape。
-- initializer 形状变化。
-- op count 变化，例如 `Cast` 从 `0` 变成 `2`。
-- 架构标签，例如 `conv1d`、`transformer_attention`、`precision_cast`。
-- compact diff JSON，供 LLM 使用。
-
-### `inspect_triton_code`
-
-读取旧 Triton model repository，生成代码摘要：
-
-- 文本文件的前若干行预览。
-- 文件大小和行数。
-- binary 文件只记录类型和大小，不把 ONNX 二进制内容塞进 LLM。
-
-例如会把 `1/model.py` 里的 `EXPECTED_SEQUENCE_LENGTH = 32` 暴露给 LLM。
-
-### `plan_patch_ops`
-
-调用 LLM，输入是：
-
-- ONNX diff JSON。
-- 旧 Triton 代码摘要。
-- 可选映射规则 Markdown，例如 `examples/improved_triton_mapping_rules.md`。
-- 允许的 patch operation 类型。
-- fallback patch ops。
-
-LLM 只能返回结构化 JSON，例如：
-
-```json
-{
-  "patch_ops": [
-    {
-      "operation": "copy_target_onnx",
-      "path": "model.onnx"
-    },
-    {
-      "operation": "regex_replace",
-      "path": "config.pbtxt",
-      "pattern": "(name:\\s*\"input_ids\"[\\s\\S]*?dims:\\s*\\[)[^\\]]*(\\])",
-      "replacement": "\\1 -1, 40 \\2",
-      "count": 1,
-      "reason": "Update Triton dims for input_ids."
-    },
-    {
-      "operation": "regex_replace",
-      "path": "1/model.py",
-      "pattern": "EXPECTED_SEQUENCE_LENGTH\\s*=\\s*\\d+",
-      "replacement": "EXPECTED_SEQUENCE_LENGTH = 40",
-      "count": 1,
-      "reason": "Update hardcoded Triton Python backend sequence length guard."
-    }
-  ]
-}
-```
-
-LLM 不负责写文件，也不输出完整 `model.py`。它只输出“改哪里、怎么改”的少量指令。
-
-## 自定义映射规则 Markdown
-
-有时你提供的 Python 服务代码不是标准 Triton 写法，而是改进后的内部框架。例如它可能不用 `EXPECTED_SEQUENCE_LENGTH`，而是使用：
-
-```python
-MODEL_SEQUENCE_TOKENS = 32
-MODEL_NUM_CLASSES = 5
-```
-
-这时可以写一个 Markdown 映射规则文件，告诉 LLM：
-
-- ONNX 的 `input_ids` 目标 shape 最后一维对应 `MODEL_SEQUENCE_TOKENS`。
-- ONNX 的 `logits` 目标 shape 最后一维对应 `MODEL_NUM_CLASSES`。
-- 只需要 patch 常量，不要重写完整函数。
-- internal initializer 或 Cast 变化只需要替换 ONNX 和记录报告，不要随意改 Python dtype。
-
-示例文件：
-
-```text
-examples/improved_triton_mapping_rules.md
-```
-
-运行时传入：
+DeepSeek policy (real LLM driving the loop):
 
 ```powershell
-py -m triton_change.langgraph_app.cli `
-  artifacts\onnx\hybrid_base.onnx `
-  artifacts\onnx\hybrid_modified.onnx `
-  --triton-model-dir artifacts\improved_triton_repo\hybrid_text_model `
-  --mapping-rules examples\improved_triton_mapping_rules.md `
-  --out artifacts\improved_langgraph_patch
+py scripts\run_agent.py tasks\task_000001 --policy deepseek --max-steps 5
 ```
 
-LangGraph 会把这个 Markdown 与 ONNX diff JSON、旧 Triton 代码摘要一起写入 `plan_patch_ops` 的 LLM 输入快照。LLM 必须基于这些规则输出局部 patch ops。
-
-### `apply_patch`
-
-本地工具执行 patch ops：
-
-- `copy_target_onnx`：复制新 ONNX 到 Triton repo。
-- 自动复制 ONNX external data sidecar，例如 `hybrid_modified.onnx.data`。
-- `regex_replace`：对 `config.pbtxt` 或 `1/model.py` 做局部替换。
-- `replace_text`：做精确文本替换。
-- `write_delta_report`：把完整 ONNX diff 写成 `delta_report.json`。
-
-工具会校验 patch 路径不能逃出目标 Triton model 目录。
-
-### `write_summary`
-
-生成：
-
-```text
-PATCH_SUMMARY.md
-```
-
-里面包含：
-
-- 改了哪些文件。
-- 每个 patch op 的执行结果。
-- 使用了哪些 ONNX 差异。
-- LLM token 用量。
-
-## 日志内容
-
-每次运行会写入：
-
-```text
-log/<run-id>/
-```
-
-典型文件：
-
-```text
-01_node_input_analyze_graphs.json
-02_node_output_analyze_graphs.json
-03_node_input_inspect_triton_code.json
-04_node_output_inspect_triton_code.json
-05_node_input_plan_patch_ops.json
-06_llm_call_make_patch_ops.json
-07_node_output_plan_patch_ops.json
-08_node_input_apply_patch_node.json
-09_tool_call_apply_patch_ops.json
-10_node_output_apply_patch_node.json
-11_node_input_write_summary.json
-12_tool_call_write_patch_summary.json
-13_node_output_write_summary.json
-```
-
-日志会包含：
-
-- 每个 LangGraph 节点的输入 state。
-- 每个 LangGraph 节点的输出 state。
-- LLM 调用的输入摘要。
-- 映射规则 Markdown 内容，如果传入了 `--mapping-rules`。
-- LLM 返回的 patch ops。
-- LLM token 用量：
-  - `input_tokens`
-  - `output_tokens`
-  - `total_tokens`
-  - `model`
-  - `provider`
-- 工具调用 payload。
-- 每个工具 patch 的执行结果。
-
-日志会做基本敏感信息清理，`sk-...` 形式的 key 会被替换为 `sk-***REDACTED***`。同时 `log/` 默认在 `.gitignore` 中，不会被提交。
-
-## 终端进度
-
-运行 LangGraph 时，终端会显示类似：
-
-```text
-[langgraph] run_id=demo_run
-[langgraph] log_dir=log\demo_run
-[langgraph] analyze_graphs: start
-[langgraph] analyze_graphs: done
-[langgraph] inspect_triton_code: start
-[langgraph] inspect_triton_code: done
-[langgraph] plan_patch_ops: start
-[langgraph] make_patch_ops: tokens in=3560 out=239
-[langgraph] plan_patch_ops: done
-[langgraph] apply_patch_node: start
-[langgraph] tool apply_patch_ops: applied_patch_ops
-[langgraph] apply_patch_node: done
-[langgraph] write_summary: start
-[langgraph] tool write_patch_summary: wrote_markdown_summary
-[langgraph] write_summary: done
-```
-
-## 确定性 ONNX Diff
-
-不使用 LangGraph 时，可以只生成 ONNX 差异：
+5-task baseline (oracle or deepseek):
 
 ```powershell
-$env:PYTHONPATH="src"
-py -m triton_change.onnx_delta.cli `
-  artifacts\onnx\hybrid_base.onnx `
-  artifacts\onnx\hybrid_modified.onnx `
-  --out artifacts\delta.json
+py scripts\run_phase2_baseline.py --policy oracle --cpu-demo
+py scripts\run_phase2_baseline.py --policy deepseek --max-steps 6
 ```
 
-默认终端输出 compact report，`--out` 会写完整报告。
+Outputs: `tasks/<task>/trajectory.json`, `trajectories/baseline_<policy>.{jsonl,md}`.
 
-## 确定性 Triton Patch
-
-如果不想调用 LLM，可以使用确定性 patcher：
+### 6. Smoke-test the DeepSeek client
 
 ```powershell
-$env:PYTHONPATH="src"
-py -m triton_change.triton.patch_cli `
-  artifacts\triton_repo\hybrid_text_model `
-  artifacts\onnx\hybrid_base.onnx `
-  artifacts\onnx\hybrid_modified.onnx `
-  --out artifacts\triton_repo_patched
+py scripts\smoke_test_deepseek.py
 ```
 
-这条路径主要用于 baseline 对照。更推荐用 LangGraph 路径测试“LLM 生成局部修改指令，本地工具执行修改”的能力。
+Expected: response `'pong'`, ~30 tokens, ~3 seconds.
 
-## 测试
+---
 
-```powershell
-$env:PYTHONPATH="src"
-py -m pytest -q
-```
+## Design summary
 
-也可以验证 Python 文件能正常编译：
+The agent operates under three hard constraints:
 
-```powershell
-$env:PYTHONPATH="src"
-py -m compileall -q src tests
-```
+1. **Agent-visible inputs are exactly three files** (`base.onnx`, `target.onnx`, `old_model_triton.py`). Nothing else.
+2. **Correctness comes from validators, never from LLM judge** — `static_check`, sandboxed `correctness_check`, and benchmark.
+3. **Patch ops, not full-file rewrites** — 8 op types ranked by surgical precision, anti-hacking reward design.
 
-## 安全约定
+Reward components, semantic-change labels, sandbox requirements, trajectory
+schema, and phased acceptance gates are spelled out in the spec document.
 
-- 不要把 API key 写进仓库。
-- 用环境变量传入 `OPENAI_API_KEY`。
-- `artifacts/`、`artifacts_*/`、`log/`、`.env` 默认不会提交。
-- LLM 只输出 patch ops，不直接写文件。
-- 文件修改由本地工具完成，并限制在目标 Triton model 目录内。
+---
+
+## Conventions
+
+- API keys live only in `.env` (gitignored). Never commit them.
+- Generated `.onnx` / `.pt` files are gitignored and reproduced by `scripts/generate_task_*.py`.
+- Tasks numbered `task_NNNNNN` (six digits, zero-padded).
+- Patch op `path` values are relative, always end with `.py`, never contain `..` or leading `/`.
+- Trajectories include `failure_class` and `reward_breakdown` for debugging.

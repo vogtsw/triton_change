@@ -1,4 +1,0 @@
-display_name: Triton ONNX Delta
-short_description: Diff two ONNX graphs and patch Triton serving artifacts.
-default_prompt: Compare these ONNX models, explain serving-impacting changes, and update the Triton model repository incrementally.
-

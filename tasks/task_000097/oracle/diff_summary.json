@@ -1,0 +1,135 @@
+{
+  "raw_diff": {
+    "input_shape_changes": [
+      {
+        "name": "input",
+        "old_shape": [
+          1,
+          128,
+          768
+        ],
+        "new_shape": [
+          1,
+          128,
+          896
+        ]
+      }
+    ],
+    "output_shape_changes": [
+      {
+        "name": "output",
+        "old_shape": [
+          1,
+          128,
+          768
+        ],
+        "new_shape": [
+          1,
+          128,
+          896
+        ]
+      }
+    ],
+    "input_dtype_changes": [],
+    "output_dtype_changes": [],
+    "op_count_delta": {},
+    "weight_shape_changes": [
+      {
+        "name": "ln.weight",
+        "old_shape": [
+          768
+        ],
+        "new_shape": [
+          896
+        ]
+      },
+      {
+        "name": "ln.bias",
+        "old_shape": [
+          768
+        ],
+        "new_shape": [
+          896
+        ]
+      },
+      {
+        "name": "fc1.weight",
+        "old_shape": [
+          3072,
+          768
+        ],
+        "new_shape": [
+          3584,
+          896
+        ]
+      },
+      {
+        "name": "fc1.bias",
+        "old_shape": [
+          3072
+        ],
+        "new_shape": [
+          3584
+        ]
+      },
+      {
+        "name": "fc2.weight",
+        "old_shape": [
+          768,
+          3072
+        ],
+        "new_shape": [
+          896,
+          3584
+        ]
+      },
+      {
+        "name": "fc2.bias",
+        "old_shape": [
+          768
+        ],
+        "new_shape": [
+          896
+        ]
+      }
+    ],
+    "attribute_changes": [
+      {
+        "op_type": "LayerNormalization",
+        "field": "epsilon",
+        "old": 1e-05,
+        "new": 1e-06
+      }
+    ],
+    "activation_changes": [],
+    "norm_changes": [],
+    "batch_changes": []
+  },
+  "semantic_labels": [
+    {
+      "label": "shape_param_change",
+      "from": {
+        "hidden_size": 768,
+        "intermediate_size": 3072
+      },
+      "to": {
+        "hidden_size": 896,
+        "intermediate_size": 3584
+      },
+      "affected_region_hint": "constant:HIDDEN_SIZE,constant:INTERMEDIATE_SIZE",
+      "confidence": 1.0
+    },
+    {
+      "label": "norm_change",
+      "from": {
+        "ln_eps": 1e-05
+      },
+      "to": {
+        "ln_eps": 1e-06
+      },
+      "affected_region_hint": "constant:LN_EPS",
+      "confidence": 1.0
+    }
+  ],
+  "summary_text": "Combo shape+eps: H 768->896, eps 1e-5->1e-6."
+}

@@ -1,0 +1,15 @@
+{
+  "labels": [
+    {
+      "label": "norm_change",
+      "from": {
+        "norm": "LayerNorm"
+      },
+      "to": {
+        "norm": "RMSNorm"
+      },
+      "affected_region_hint": "kernel:layernorm_fwd_kernel",
+      "confidence": 1.0
+    }
+  ]
+}

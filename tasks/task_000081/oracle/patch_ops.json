@@ -1,0 +1,30 @@
+{
+  "task_id": "task_000081",
+  "ops": [
+    {
+      "operation": "update_constant",
+      "path": "candidate_model_triton.py",
+      "constant_name": "HIDDEN_SIZE",
+      "new_value": 768,
+      "reason": "hidden 512 -> 768",
+      "old_value": 512
+    },
+    {
+      "operation": "update_constant",
+      "path": "candidate_model_triton.py",
+      "constant_name": "INTERMEDIATE_SIZE",
+      "new_value": 3072,
+      "reason": "intermediate 2048 -> 3072",
+      "old_value": 2048
+    },
+    {
+      "operation": "update_constant",
+      "path": "candidate_model_triton.py",
+      "constant_name": "LN_EPS",
+      "new_value": 1e-06,
+      "reason": "LayerNorm eps 1e-05 -> 1e-06",
+      "old_value": 1e-05
+    }
+  ],
+  "notes": "Combo shape+eps: H 512->768, eps 1e-5->1e-6."
+}

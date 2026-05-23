@@ -1,0 +1,117 @@
+{
+  "raw_diff": {
+    "input_shape_changes": [
+      {
+        "name": "input",
+        "old_shape": [
+          1,
+          128,
+          512
+        ],
+        "new_shape": [
+          1,
+          128,
+          768
+        ]
+      }
+    ],
+    "output_shape_changes": [
+      {
+        "name": "output",
+        "old_shape": [
+          1,
+          128,
+          512
+        ],
+        "new_shape": [
+          1,
+          128,
+          768
+        ]
+      }
+    ],
+    "input_dtype_changes": [],
+    "output_dtype_changes": [],
+    "op_count_delta": {},
+    "weight_shape_changes": [
+      {
+        "name": "ln.weight",
+        "old_shape": [
+          512
+        ],
+        "new_shape": [
+          768
+        ]
+      },
+      {
+        "name": "ln.bias",
+        "old_shape": [
+          512
+        ],
+        "new_shape": [
+          768
+        ]
+      },
+      {
+        "name": "fc1.weight",
+        "old_shape": [
+          2048,
+          512
+        ],
+        "new_shape": [
+          3072,
+          768
+        ]
+      },
+      {
+        "name": "fc1.bias",
+        "old_shape": [
+          2048
+        ],
+        "new_shape": [
+          3072
+        ]
+      },
+      {
+        "name": "fc2.weight",
+        "old_shape": [
+          512,
+          2048
+        ],
+        "new_shape": [
+          768,
+          3072
+        ]
+      },
+      {
+        "name": "fc2.bias",
+        "old_shape": [
+          512
+        ],
+        "new_shape": [
+          768
+        ]
+      }
+    ],
+    "attribute_changes": [],
+    "activation_changes": [],
+    "norm_changes": [],
+    "batch_changes": []
+  },
+  "semantic_labels": [
+    {
+      "label": "shape_param_change",
+      "from": {
+        "hidden_size": 512,
+        "intermediate_size": 2048
+      },
+      "to": {
+        "hidden_size": 768,
+        "intermediate_size": 3072
+      },
+      "affected_region_hint": "constant:HIDDEN_SIZE,constant:INTERMEDIATE_SIZE",
+      "confidence": 1.0
+    }
+  ],
+  "summary_text": "Hidden 512->768, intermediate 2048->3072."
+}

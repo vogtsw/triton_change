@@ -1,0 +1,34 @@
+{
+  "raw_diff": {
+    "input_shape_changes": [],
+    "output_shape_changes": [],
+    "input_dtype_changes": [
+      {
+        "name": "input",
+        "old_dtype": "float32",
+        "new_dtype": "float16"
+      }
+    ],
+    "output_dtype_changes": [],
+    "op_count_delta": {},
+    "weight_shape_changes": [],
+    "attribute_changes": [],
+    "activation_changes": [],
+    "norm_changes": [],
+    "batch_changes": []
+  },
+  "semantic_labels": [
+    {
+      "label": "dtype_change",
+      "from": {
+        "dtype": "float32"
+      },
+      "to": {
+        "dtype": "float16"
+      },
+      "affected_region_hint": "constant:DTYPE_NAME",
+      "confidence": 1.0
+    }
+  ],
+  "summary_text": "Compute dtype fp32 -> fp16 on smaller hidden=512 model."
+}

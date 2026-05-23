@@ -1,0 +1,144 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://triton-change.local/schemas/patch_ops.json",
+  "title": "Patch Ops Document",
+  "description": "Schema for oracle/patch_ops.json or agent-emitted patch op batches.",
+  "type": "object",
+  "required": ["task_id", "ops"],
+  "properties": {
+    "task_id": {"type": "string"},
+    "ops": {
+      "type": "array",
+      "minItems": 0,
+      "maxItems": 20,
+      "items": {"$ref": "#/$defs/patch_op"}
+    },
+    "notes": {"type": "string"}
+  },
+  "additionalProperties": false,
+
+  "$defs": {
+    "safe_path": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^[A-Za-z0-9_./-]+\\.py$",
+      "not": {
+        "anyOf": [
+          {"pattern": "\\.\\."},
+          {"pattern": "^/"}
+        ]
+      },
+      "description": "Relative .py path. No '..' segments. Absolute paths forbidden."
+    },
+
+    "patch_op": {
+      "type": "object",
+      "required": ["operation", "path"],
+      "properties": {
+        "operation": {
+          "type": "string",
+          "enum": [
+            "update_constant",
+            "update_kernel_meta",
+            "replace_function",
+            "replace_kernel_body",
+            "replace_region",
+            "insert_after_region",
+            "regex_replace",
+            "full_file_replace"
+          ]
+        },
+        "path": {"$ref": "#/$defs/safe_path"},
+        "reason": {"type": "string"}
+      },
+      "additionalProperties": true,
+      "allOf": [
+        {
+          "if": {"properties": {"operation": {"const": "update_constant"}}, "required": ["operation"]},
+          "then": {
+            "required": ["constant_name", "new_value"],
+            "properties": {
+              "constant_name": {"type": "string", "minLength": 1},
+              "old_value": {},
+              "new_value": {}
+            }
+          }
+        },
+        {
+          "if": {"properties": {"operation": {"const": "update_kernel_meta"}}, "required": ["operation"]},
+          "then": {
+            "required": ["kernel_name", "meta_name", "new_value"],
+            "properties": {
+              "kernel_name": {"type": "string", "minLength": 1},
+              "meta_name": {
+                "type": "string",
+                "enum": ["BLOCK_SIZE", "BLOCK_M", "BLOCK_N", "BLOCK_K", "num_warps", "num_stages"]
+              },
+              "new_value": {"type": ["integer", "string"]}
+            }
+          }
+        },
+        {
+          "if": {"properties": {"operation": {"const": "replace_function"}}, "required": ["operation"]},
+          "then": {
+            "required": ["function_name", "new_code"],
+            "properties": {
+              "function_name": {"type": "string", "minLength": 1},
+              "new_code": {"type": "string", "minLength": 1}
+            }
+          }
+        },
+        {
+          "if": {"properties": {"operation": {"const": "replace_kernel_body"}}, "required": ["operation"]},
+          "then": {
+            "required": ["kernel_name", "new_body"],
+            "properties": {
+              "kernel_name": {"type": "string", "minLength": 1},
+              "new_body": {"type": "string", "minLength": 1}
+            }
+          }
+        },
+        {
+          "if": {"properties": {"operation": {"const": "replace_region"}}, "required": ["operation"]},
+          "then": {
+            "required": ["region", "new_code"],
+            "properties": {
+              "region": {"type": "string", "minLength": 1},
+              "new_code": {"type": "string", "minLength": 1}
+            }
+          }
+        },
+        {
+          "if": {"properties": {"operation": {"const": "insert_after_region"}}, "required": ["operation"]},
+          "then": {
+            "required": ["region", "new_code"],
+            "properties": {
+              "region": {"type": "string", "minLength": 1},
+              "new_code": {"type": "string", "minLength": 1}
+            }
+          }
+        },
+        {
+          "if": {"properties": {"operation": {"const": "regex_replace"}}, "required": ["operation"]},
+          "then": {
+            "required": ["pattern", "replacement"],
+            "properties": {
+              "pattern": {"type": "string", "minLength": 1},
+              "replacement": {"type": "string"},
+              "count": {"type": "integer", "minimum": 0}
+            }
+          }
+        },
+        {
+          "if": {"properties": {"operation": {"const": "full_file_replace"}}, "required": ["operation"]},
+          "then": {
+            "required": ["new_code"],
+            "properties": {
+              "new_code": {"type": "string", "minLength": 10}
+            }
+          }
+        }
+      ]
+    }
+  }
+}

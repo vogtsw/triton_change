@@ -1,0 +1,15 @@
+{
+  "labels": [
+    {
+      "label": "dtype_change",
+      "from": {
+        "dtype": "float32"
+      },
+      "to": {
+        "dtype": "bfloat16"
+      },
+      "affected_region_hint": "constant:DTYPE_NAME",
+      "confidence": 1.0
+    }
+  ]
+}

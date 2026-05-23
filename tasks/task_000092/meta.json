@@ -1,0 +1,31 @@
+{
+  "task_id": "task_000092",
+  "tier": "MVP-hard",
+  "change_types": [
+    "norm_change",
+    "dtype_change"
+  ],
+  "base_model": "ln_linear_gelu_linear",
+  "from": {
+    "hidden_size": 768,
+    "intermediate_size": 3072,
+    "seq_len": 128,
+    "batch_size": 1,
+    "ln_eps": 1e-05,
+    "dtype_name": "float32"
+  },
+  "to": {
+    "hidden_size": 768,
+    "intermediate_size": 3072,
+    "seq_len": 128,
+    "batch_size": 1,
+    "ln_eps": 1e-05,
+    "dtype_name": "float16"
+  },
+  "dtype": "fp16",
+  "device": "cuda",
+  "min_gpu_capability": "sm_70",
+  "estimated_difficulty": 5,
+  "expected_oracle_patch_ops": 2,
+  "description": "Combo RMSNorm+dtype fp32->fp16 (H=768)."
+}

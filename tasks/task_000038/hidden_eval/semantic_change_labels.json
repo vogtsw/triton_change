@@ -1,0 +1,15 @@
+{
+  "labels": [
+    {
+      "label": "shape_param_change",
+      "from": {
+        "seq_len": 64
+      },
+      "to": {
+        "seq_len": 1024
+      },
+      "affected_region_hint": "constant:SEQ_LEN",
+      "confidence": 1.0
+    }
+  ]
+}

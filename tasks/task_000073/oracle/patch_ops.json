@@ -1,0 +1,20 @@
+{
+  "task_id": "task_000073",
+  "ops": [
+    {
+      "operation": "replace_kernel_body",
+      "path": "candidate_model_triton.py",
+      "kernel_name": "gelu_act_kernel",
+      "new_body": "pid = tl.program_id(0)\noffsets = pid * BLOCK_SIZE + tl.arange(0, BLOCK_SIZE)\nmask = offsets < N_ELEMENTS\n\nx = tl.load(X_ptr + offsets, mask=mask).to(tl.float32)\ny = tl.maximum(x, 0.0)\ntl.store(Y_ptr + offsets, y, mask=mask)\n",
+      "reason": "replace GELU activation kernel with ReLU"
+    },
+    {
+      "operation": "regex_replace",
+      "path": "candidate_model_triton.py",
+      "pattern": "_gelu_tanh\\(h\\)",
+      "replacement": "_gelu_relu(h)",
+      "reason": "call ReLU helper in model_forward"
+    }
+  ],
+  "notes": "GELU->ReLU (variant 14)."
+}
