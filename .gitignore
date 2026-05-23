@@ -4,7 +4,17 @@ __pycache__/
 *.pyo
 .pytest_cache/
 .env
+.env.*
+!.env.example
 *.egg-info/
+
+# Secrets — never commit API keys or credential files
+**/secrets*
+**/*credentials*
+
+# Internal design spec — local only, not for GitHub
+onnx_triton_single_file_agent_spec.md
+*_agent_spec.md
 
 # v2 kernel agent runtime / generated artifacts
 .triton_cache/

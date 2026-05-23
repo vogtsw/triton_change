@@ -1,6 +1,6 @@
 """ONNX-guided Triton single-file kernel migration agent.
 
-See `onnx_triton_single_file_agent_spec.md` for the full design.
+See the local design spec (onnx_triton_single_file_agent_spec.md, gitignored) for details.
 """
 
 __all__ = ["__version__"]

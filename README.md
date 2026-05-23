@@ -6,7 +6,7 @@ ONNX-guided Triton single-file kernel migration agent.
 produces `new_model_triton.py` whose `model_forward` matches the semantics of
 `target.onnx` — through multi-step LangGraph patch ops with validator-based reward.
 
-The full design lives in [`onnx_triton_single_file_agent_spec.md`](onnx_triton_single_file_agent_spec.md).
+The full design spec (`onnx_triton_single_file_agent_spec.md`) is **local-only** and is not tracked in git (see `.gitignore`).
 
 ---
 
@@ -163,11 +163,13 @@ tests/
 
 ## Setup
 
+**Do not commit:** API keys (`.env`) or `onnx_triton_single_file_agent_spec.md` — both are in `.gitignore`.
+
 ```powershell
 cd D:\test\mygithub\triton_change
 py -m pip install -e ".[dev,torch,dotenv]"
 copy .env.example .env
-# edit .env, set DEEPSEEK_API_KEY=sk-...
+# edit .env locally — never commit DEEPSEEK_API_KEY
 ```
 
 Optional: install Triton (Linux + CUDA only; on Windows you can develop the
