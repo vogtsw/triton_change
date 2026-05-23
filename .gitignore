@@ -8,7 +8,7 @@ __pycache__/
 !.env.example
 *.egg-info/
 
-# Secrets — never commit API keys or credential files
+# Secrets — never commit API keys (.env is local-only for DEEPSEEK_API_KEY)
 **/secrets*
 **/*credentials*
 

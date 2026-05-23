@@ -163,7 +163,11 @@ tests/
 
 ## Setup
 
-**Do not commit:** API keys (`.env`) or `onnx_triton_single_file_agent_spec.md` — both are in `.gitignore`.
+**Do not commit:** API keys (`.env` only) or `onnx_triton_single_file_agent_spec.md`. Before push:
+
+```powershell
+py scripts\check_no_secrets.py
+```
 
 ```powershell
 cd D:\test\mygithub\triton_change
