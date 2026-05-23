@@ -22,7 +22,7 @@ The full design spec (`onnx_triton_single_file_agent_spec.md`) is **local-only**
 | Phase 3b | Expand to 100 tasks (easy:medium:hard ≈ 5:3:2) | **Done** |
 | Phase 4 | SFT export (observation→action) | **Done** (`scripts/export_sft.py`) |
 | Phase 5 | DPO pairs (K=8 sampling + oracle judge) | **Done** (`scripts/build_dpo_pairs.py`) |
-| Phase 6 | LangGraph rollout + GRPO/RLOO/PPO scaffolding | **Done** (task<500; no GPU trainer) |
+| Phase 6 | LangGraph rollout + GRPO/RLOO/PPO scaffolding | **Done** (data prep only; **no RL training**) |
 
 ### Phase 1 acceptance evidence
 
@@ -77,8 +77,24 @@ py scripts\eval_patch_oracle.py --from 1 --to 100
 py scripts\run_phase2_baseline.py --policy oracle --cpu-demo
 py scripts\export_sft.py trajectories\baseline_oracle.jsonl
 py scripts\build_dpo_pairs.py
-py scripts\run_rl_rollout.py --policy oracle --cpu-demo --from 1 --to 5
+py scripts\export_trajectory.py all trajectories\baseline_oracle.jsonl
+py scripts\run_acceptance.py --quick
+py scripts\analyze_onnx_diff.py tasks\task_000001
 ```
+
+### Spec gaps closed (no RL training)
+
+| Spec section | Implementation |
+|---|---|
+| 5.1 ONNX diff analyzer | `src/triton_change/diff_analyzer/onnx_diff.py` + `scripts/analyze_onnx_diff.py` |
+| 5.2 Code analyzer | `agent/observation.py` (+ constant kind, kernel launch sites) |
+| 5.7 Benchmark | `agent/tools.py::benchmark_tool` |
+| Evaluator I/O | `src/triton_change/evaluator/evaluate.py` + `schemas/evaluator_schema.json` |
+| Trajectory export SFT/DPO/RL | `scripts/export_trajectory.py` |
+| Phase 0 CI | `.github/workflows/ci.yml` |
+| Acceptance gates | `scripts/run_acceptance.py` |
+| Batch validation / Phase1 | `scripts/validate_all_tasks.py`, `scripts/run_phase1_batch.py` |
+| Metrics | `scripts/report_metrics.py` |
 
 ### Phase 3b–6 (100 tasks + data prep + RL scaffolding)
 
@@ -129,6 +145,10 @@ src/triton_change/                Python package
   static_check.py                 AST + import whitelist + danger scan
   correctness.py                  subprocess sandbox + tolerance comparison
   reward.py                       anti-hacking reward composition
+  diff_analyzer/onnx_diff.py      ONNX raw diff + semantic labels
+  evaluator/
+    patch_judge.py                oracle AST judge (no GPU)
+    evaluate.py                   unified patch/static/correctness/reward
   agent/
     observation.py                CodeSummary + Observation + hint templates
     tools.py                      Unified ToolResult wrappers
@@ -146,6 +166,14 @@ scripts/
   run_phase1.py                   End-to-end Phase 1 driver
   run_agent.py                    Phase 2 single-task agent driver
   run_phase2_baseline.py          Phase 2 multi-task baseline (oracle / deepseek)
+  run_baseline.py                 alias of run_phase2_baseline.py
+  run_phase1_batch.py             batch oracle evaluation (cpu-demo)
+  run_acceptance.py               spec acceptance gates
+  validate_all_tasks.py           schema-validate task range
+  analyze_onnx_diff.py            live ONNX diff for a task
+  export_trajectory.py            SFT / DPO / RL dataset export
+  report_metrics.py               trajectory JSONL metrics
+  check_no_secrets.py             block API keys in git-tracked files
   smoke_test_deepseek.py          DeepSeek API smoke test
 
 tests/

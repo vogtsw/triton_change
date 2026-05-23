@@ -20,7 +20,8 @@ from triton_change.static_check import static_check as _static_check
 
 
 __all__ = ["ToolResult", "apply_patch_ops_tool", "static_check_tool",
-           "correctness_check_tool", "inspect_code_region_tool", "finalize_tool"]
+           "correctness_check_tool", "inspect_code_region_tool", "finalize_tool",
+           "benchmark_tool"]
 
 
 VALID_TOOLS = {
@@ -245,3 +246,69 @@ def finalize_tool(reason: str) -> ToolResult:
         success=True,
         payload={"reason": reason},
     )
+
+
+# ---------- benchmark (optional, spec 5.7) ----------
+
+
+def benchmark_tool(
+    task_dir: Path,
+    candidate_path: Path | None = None,
+    *,
+    device: str = "cpu",
+    warmup: int = 0,
+    repeats: int = 1,
+) -> ToolResult:
+    """Wall-time micro-benchmark of candidate model_forward (torch path only)."""
+    import time
+
+    task_dir = Path(task_dir)
+    cand = Path(candidate_path) if candidate_path else task_dir / "candidate_model_triton.py"
+    if not cand.exists():
+        return ToolResult(
+            tool="run_benchmark",
+            success=False,
+            failure_class="runtime",
+            error="candidate missing for benchmark",
+        )
+    try:
+        import importlib.util
+        import torch
+
+        spec = importlib.util.spec_from_file_location("bench_cand", cand)
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        weights = torch.load(task_dir / "hidden_eval" / "weights.pt", weights_only=False)
+        inputs = torch.load(task_dir / "hidden_eval" / "test_inputs.pt", weights_only=False)
+        x = inputs[0]
+        w = weights
+
+        def _fwd():
+            return mod.model_forward(
+                x, w["ln_w"], w["ln_b"], w["w1"], w["b1"], w["w2"], w["b2"],
+            )
+
+        for _ in range(warmup):
+            _fwd()
+        t0 = time.perf_counter()
+        for _ in range(repeats):
+            _fwd()
+        elapsed = (time.perf_counter() - t0) / max(repeats, 1)
+        return ToolResult(
+            tool="run_benchmark",
+            success=True,
+            payload={
+                "wall_time_s": round(elapsed, 6),
+                "repeats": repeats,
+                "no_regression": True,
+                "device": device,
+                "note": "relative baseline not configured; no_regression=True stub",
+            },
+        )
+    except Exception as e:
+        return ToolResult(
+            tool="run_benchmark",
+            success=False,
+            failure_class="runtime",
+            error=str(e),
+        )

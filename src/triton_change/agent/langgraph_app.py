@@ -23,7 +23,13 @@ def build_agent_graph(
     policy: PolicyBase,
     **runner_kw: Any,
 ):
-    """Return a compiled LangGraph app, or None if langgraph unavailable."""
+    """Return a compiled LangGraph app, or None if langgraph unavailable.
+
+    Graph topology (spec 5.3):
+        reset -> observe_act_rollout -> END
+
+    The rollout node runs the full AgentRunner loop (observe -> policy -> tools -> reward).
+    """
     try:
         from langgraph.graph import END, StateGraph
     except ImportError:
@@ -31,13 +37,19 @@ def build_agent_graph(
 
     runner = AgentRunner(task_dir, policy, **runner_kw)
 
+    def reset_node(state: AgentGraphState) -> AgentGraphState:
+        runner._reset_workspace()
+        return {"step_idx": 0, "done": False}
+
     def rollout_node(state: AgentGraphState) -> AgentGraphState:
         result = runner.run()
         return {"done": True, "result": result.to_dict(), "step_idx": result.total_steps}
 
     graph = StateGraph(AgentGraphState)
+    graph.add_node("reset", reset_node)
     graph.add_node("rollout", rollout_node)
-    graph.set_entry_point("rollout")
+    graph.set_entry_point("reset")
+    graph.add_edge("reset", "rollout")
     graph.add_edge("rollout", END)
     return graph.compile()
 

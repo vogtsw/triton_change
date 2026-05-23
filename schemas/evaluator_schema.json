@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://triton-change.local/schemas/evaluator_result.json",
+  "title": "EvaluatorResult",
+  "type": "object",
+  "required": ["task_id", "patch_apply_ok", "static_passed", "correctness_passed", "success", "reward"],
+  "properties": {
+    "task_id": {"type": "string"},
+    "patch_apply_ok": {"type": "boolean"},
+    "static_passed": {"type": "boolean"},
+    "correctness_passed": {"type": "boolean"},
+    "oracle_ast_match": {"type": "boolean"},
+    "success": {"type": "boolean"},
+    "patch_ops_count": {"type": "integer", "minimum": 0},
+    "reward": {
+      "type": "object",
+      "required": ["components", "total", "success"],
+      "properties": {
+        "components": {"type": "object", "additionalProperties": {"type": "number"}},
+        "total": {"type": "number"},
+        "failure_class": {"type": ["string", "null"]},
+        "success": {"type": "boolean"}
+      }
+    },
+    "judge": {"type": ["object", "null"]},
+    "static_result": {"type": ["object", "null"]},
+    "correctness_result": {"type": ["object", "null"]}
+  },
+  "additionalProperties": true
+}

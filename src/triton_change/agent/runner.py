@@ -46,6 +46,7 @@ from triton_change.agent.observation import (
 from triton_change.agent.policy import PolicyBase
 from triton_change.agent.tools import (
     apply_patch_ops_tool,
+    benchmark_tool,
     correctness_check_tool,
     finalize_tool,
     inspect_code_region_tool,
@@ -289,10 +290,10 @@ class AgentRunner:
                 if corr_res.success:
                     success = True
             elif tool == "run_benchmark":
-                tool_results.append(ToolResult(
-                    tool="run_benchmark", success=True,
-                    payload={"no_regression": True, "note": "stub: benchmark not implemented"},
-                ))
+                bench_res = benchmark_tool(
+                    self.task_dir, candidate_path, device=self.device,
+                )
+                tool_results.append(bench_res)
             elif tool == "finalize":
                 tool_results.append(finalize_tool(action.get("reason", "")))
             else:

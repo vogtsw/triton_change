@@ -19,6 +19,7 @@ from __future__ import annotations
 import ast
 import hashlib
 import json
+import re
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any
@@ -44,6 +45,16 @@ class ConstantInfo:
     name: str
     value: Any
     lineno: int
+    kind: str = "unknown"  # shape_param | block_meta | numeric_const | unknown
+    confidence: float = 0.5
+
+
+@dataclass
+class KernelLaunchSite:
+    kernel_name: str
+    grid: str
+    lineno: int
+    meta: dict[str, Any]
 
 
 @dataclass
@@ -67,6 +78,7 @@ class CodeSummary:
     kernels: list[KernelInfo] = field(default_factory=list)
     functions: list[FunctionInfo] = field(default_factory=list)
     imports: list[str] = field(default_factory=list)
+    kernel_launch_sites: list[KernelLaunchSite] = field(default_factory=list)
     file_lines: int = 0
 
     def to_dict(self) -> dict[str, Any]:
@@ -75,8 +87,44 @@ class CodeSummary:
             "kernels": [asdict(k) for k in self.kernels],
             "functions": [asdict(f) for f in self.functions],
             "imports": list(self.imports),
+            "kernel_launch_sites": [asdict(s) for s in self.kernel_launch_sites],
             "file_lines": self.file_lines,
         }
+
+
+_SHAPE_CONSTS = {
+    "HIDDEN_SIZE", "INTERMEDIATE_SIZE", "SEQ_LEN", "BATCH_SIZE", "LN_EPS",
+    "GELU_IN_BIAS", "DTYPE_NAME",
+}
+_META_CONSTS = {"BLOCK_SIZE", "NUM_WARPS", "NUM_STAGES", "num_warps", "num_stages"}
+_LAUNCH_RE = re.compile(
+    r"(?P<kernel>\w+)\[(?P<grid>[^\]]+)\]\s*\(",
+    re.MULTILINE,
+)
+
+
+def _classify_constant(name: str) -> tuple[str, float]:
+    if name in _SHAPE_CONSTS or name.endswith("_SIZE") or name.endswith("_LEN"):
+        return "shape_param", 0.9
+    if name in _META_CONSTS or "BLOCK" in name or "WARP" in name:
+        return "block_meta", 0.85
+    if name.isupper():
+        return "numeric_const", 0.6
+    return "unknown", 0.3
+
+
+def _extract_launch_sites(text: str) -> list[KernelLaunchSite]:
+    sites: list[KernelLaunchSite] = []
+    for i, line in enumerate(text.splitlines(), 1):
+        m = _LAUNCH_RE.search(line)
+        if m:
+            sites.append(KernelLaunchSite(
+                kernel_name=m.group("kernel"),
+                grid=m.group("grid").strip(),
+                lineno=i,
+                meta={},
+            ))
+    return sites
 
 
 def extract_code_summary(file_path: Path | str) -> CodeSummary:
@@ -94,6 +142,8 @@ def extract_code_summary(file_path: Path | str) -> CodeSummary:
                 continue
             cs.constants.append(ConstantInfo(
                 name=node.targets[0].id, value=value, lineno=node.lineno,
+                kind=_classify_constant(node.targets[0].id)[0],
+                confidence=_classify_constant(node.targets[0].id)[1],
             ))
 
         elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
@@ -120,6 +170,7 @@ def extract_code_summary(file_path: Path | str) -> CodeSummary:
             mod = node.module or ""
             cs.imports.append(mod)
 
+    cs.kernel_launch_sites = _extract_launch_sites(text)
     return cs
 
 
